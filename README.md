@@ -1,4 +1,4 @@
-# 👁 EmoSense — Real-Time Face Emotion Recognition Web App
+# Real-Time Face Emotion Recognition Web App
 
 A production-ready full-stack web application that detects and classifies human emotions in real-time using your webcam, powered by **DeepFace**, **Flask**, and **SQLite**.
 
