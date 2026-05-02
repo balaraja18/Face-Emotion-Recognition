@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EmoSense — Real-Time Emotion Recognition</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     AUTH SCREEN
+═══════════════════════════════════════════ -->
+<div id="auth-screen" class="screen active">
+  <div class="auth-bg">
+    <div class="auth-orb orb1"></div>
+    <div class="auth-orb orb2"></div>
+    <div class="auth-orb orb3"></div>
+    <div class="grid-overlay"></div>
+  </div>
+
+  <div class="auth-container">
+    <div class="auth-brand">
+      <div class="brand-icon">
+        <span class="brand-eye">👁</span>
+      </div>
+      <h1 class="brand-name">EmoSense</h1>
+      <p class="brand-tagline">Real-Time Emotion Intelligence</p>
+    </div>
+
+    <div class="auth-card">
+      <!-- Tab Toggle -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+        <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
+        <div class="auth-tab-indicator" id="tab-indicator"></div>
+      </div>
+
+      <!-- Login Form -->
+      <div id="form-login" class="auth-form active">
+        <div class="field-group">
+          <label class="field-label">Username or Email</label>
+          <input type="text" id="login-username" class="field-input" placeholder="your@email.com" autocomplete="username" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Password</label>
+          <input type="password" id="login-password" class="field-input" placeholder="••••••••" autocomplete="current-password" />
+        </div>
+        <button class="btn-primary" onclick="login()">
+          <span class="btn-text">Sign In</span>
+          <span class="btn-loader" style="display:none">●●●</span>
+        </button>
+        <div class="auth-demo-hint">
+          Demo: <span class="mono">demo / demo123</span>
+        </div>
+      </div>
+
+      <!-- Signup Form -->
+      <div id="form-signup" class="auth-form">
+        <div class="field-group">
+          <label class="field-label">Username</label>
+          <input type="text" id="signup-username" class="field-input" placeholder="cooluser42" autocomplete="username" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Email</label>
+          <input type="email" id="signup-email" class="field-input" placeholder="your@email.com" autocomplete="email" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Password</label>
+          <input type="password" id="signup-password" class="field-input" placeholder="min 6 characters" autocomplete="new-password" />
+        </div>
+        <button class="btn-primary" onclick="signup()">
+          <span class="btn-text">Create Account</span>
+          <span class="btn-loader" style="display:none">●●●</span>
+        </button>
+      </div>
+
+      <div id="auth-error" class="auth-error" style="display:none"></div>
+    </div>
+
+    <p class="auth-footer">Powered by DeepFace · OpenCV · Flask</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MAIN APP
+═══════════════════════════════════════════ -->
+<div id="app-screen" class="screen">
+
+  <!-- Sidebar Nav -->
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-eye-sm">👁</span>
+      <span class="sidebar-brand-name">EmoSense</span>
+    </div>
+
+    <div class="sidebar-nav">
+      <button class="nav-item active" data-page="camera" onclick="showPage('camera')">
+        <span class="nav-icon">◉</span>
+        <span class="nav-label">Live Camera</span>
+      </button>
+      <button class="nav-item" data-page="dashboard" onclick="showPage('dashboard')">
+        <span class="nav-icon">▦</span>
+        <span class="nav-label">Dashboard</span>
+      </button>
+      <button class="nav-item" data-page="history" onclick="showPage('history')">
+        <span class="nav-icon">≡</span>
+        <span class="nav-label">History</span>
+      </button>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-badge">
+        <div class="user-avatar" id="user-avatar">U</div>
+        <span class="user-name" id="sidebar-username">User</span>
+      </div>
+      <button class="btn-logout" onclick="logout()">↪</button>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- ─── CAMERA PAGE ─── -->
+    <div id="page-camera" class="page active">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">Live Recognition</h2>
+          <p class="page-subtitle">Real-time emotion analysis via webcam</p>
+        </div>
+        <div class="header-actions">
+          <div class="fps-badge" id="fps-badge">-- FPS</div>
+        </div>
+      </div>
+
+      <div class="camera-layout">
+        <!-- Video Feed -->
+        <div class="video-panel">
+          <div class="video-wrapper" id="video-wrapper">
+            <video id="webcam" autoplay playsinline muted></video>
+            <canvas id="overlay-canvas"></canvas>
+
+            <!-- Emotion overlay -->
+            <div class="emotion-overlay" id="emotion-overlay">
+              <div class="emotion-badge" id="current-emotion-badge">
+                <span class="emotion-emoji" id="current-emoji">🎭</span>
+                <span class="emotion-label" id="current-emotion-label">Waiting...</span>
+              </div>
+              <div class="confidence-bar-wrap">
+                <div class="confidence-bar" id="confidence-bar"></div>
+                <span class="confidence-text" id="confidence-text">0%</span>
+              </div>
+            </div>
+
+            <!-- No-face indicator -->
+            <div class="no-face-msg" id="no-face-msg" style="display:none">
+              <span>👤 No Face Detected</span>
+            </div>
+          </div>
+
+          <div class="video-controls">
+            <button class="btn-cam" id="btn-start-cam" onclick="startCamera()">
+              <span>▶</span> Start Camera
+            </button>
+            <button class="btn-cam btn-cam-stop" id="btn-stop-cam" onclick="stopCamera()" style="display:none">
+              <span>◼</span> Stop Camera
+            </button>
+            <button class="btn-cam btn-cam-secondary" id="btn-toggle-detect" onclick="toggleDetection()" style="display:none">
+              <span>⚡</span> <span id="detect-label">Pause Detection</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Emotion Meters Panel -->
+        <div class="meters-panel">
+          <h3 class="panel-title">Emotion Breakdown</h3>
+          <div class="emotion-meters" id="emotion-meters">
+            <!-- Populated by JS -->
+          </div>
+
+          <div class="session-stats">
+            <h3 class="panel-title">Session Stats</h3>
+            <div class="stat-grid">
+              <div class="stat-item">
+                <span class="stat-value" id="stat-total">0</span>
+                <span class="stat-label">Detections</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-value" id="stat-dominant">—</span>
+                <span class="stat-label">Dominant</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-value" id="stat-avgconf">0%</span>
+                <span class="stat-label">Avg Conf.</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-value" id="stat-fps">0</span>
+                <span class="stat-label">Live FPS</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── DASHBOARD PAGE ─── -->
+    <div id="page-dashboard" class="page">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">Analytics Dashboard</h2>
+          <p class="page-subtitle">Your emotion data visualized</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn-outline" onclick="loadAnalytics()">↻ Refresh</button>
+          <button class="btn-outline" onclick="exportData('json')">⬇ JSON</button>
+          <button class="btn-outline" onclick="exportData('csv')">⬇ CSV</button>
+        </div>
+      </div>
+
+      <!-- Stats Row -->
+      <div class="analytics-stats" id="analytics-stats">
+        <div class="astat-card">
+          <span class="astat-icon">📊</span>
+          <div>
+            <span class="astat-value" id="astat-total">—</span>
+            <span class="astat-label">Total Records</span>
+          </div>
+        </div>
+        <div class="astat-card">
+          <span class="astat-icon">🎯</span>
+          <div>
+            <span class="astat-value" id="astat-conf">—</span>
+            <span class="astat-label">Avg Confidence</span>
+          </div>
+        </div>
+        <div class="astat-card">
+          <span class="astat-icon">⏱</span>
+          <div>
+            <span class="astat-value" id="astat-last">—</span>
+            <span class="astat-label">Last Session</span>
+          </div>
+        </div>
+        <div class="astat-card">
+          <span class="astat-icon">🏆</span>
+          <div>
+            <span class="astat-value" id="astat-top">—</span>
+            <span class="astat-label">Top Emotion</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="chart-card chart-card-lg">
+          <h3 class="chart-title">Emotion Distribution</h3>
+          <div class="chart-wrap"><canvas id="chart-distribution"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3 class="chart-title">24h Timeline</h3>
+          <div class="chart-wrap"><canvas id="chart-timeline"></canvas></div>
+        </div>
+        <div class="chart-card chart-card-full">
+          <h3 class="chart-title">7-Day Emotion Trend</h3>
+          <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── HISTORY PAGE ─── -->
+    <div id="page-history" class="page">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">Emotion History</h2>
+          <p class="page-subtitle">Your recorded emotions</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn-outline" onclick="loadHistory()">↻ Refresh</button>
+        </div>
+      </div>
+
+      <div class="history-table-wrap">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Emotion</th>
+              <th>Confidence</th>
+              <th>Time</th>
+              <th>Breakdown</th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody">
+            <tr><td colspan="5" class="loading-row">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast" style="display:none"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
